@@ -47,6 +47,13 @@ class CssToInlineStyles
     private $useInlineStylesBlock = false;
 
     /**
+     * Use link block reference as CSS
+     *
+     * @var    bool
+     */
+    private $loadCSSFromHTML = false;
+
+    /**
      * Strip original style tags
      *
      * @var bool
@@ -99,7 +106,7 @@ class CssToInlineStyles
      * @return string
      * @param  bool [optional] $outputXHTML Should we output valid XHTML?
      */
-    public function convert($outputXHTML = false)
+    public function convert($outputXHTML = false, $path = false)
     {
         // redefine
         $outputXHTML = (bool) $outputXHTML;
@@ -107,6 +114,32 @@ class CssToInlineStyles
         // validate
         if ($this->html == null) {
             throw new Exception('No HTML provided.');
+        }
+
+        // create new DOMDocument
+        $document = new \DOMDocument('1.0', $this->getEncoding());
+
+        // set error level
+        $internalErrors = libxml_use_internal_errors(true);
+
+        // load HTML
+        $document->loadHTML($this->html);
+
+        // Restore error level
+        libxml_use_internal_errors($internalErrors);
+
+        // check if there is some link css reference
+        if ($this->loadCSSFromHTML) {
+            foreach ($document->getElementsByTagName('link') as $node) {
+                $file = ($path ? $path : getcwd()) . $node->getAttribute( 'href' );              
+
+                if (file_exists($file)) {
+                    $this->css .= file_get_contents( $file );
+
+                    // converting to inline css because we don't need/want to load css files, so remove the link
+                    $node->parentNode->removeChild($node);
+                }
+            }
         }
 
         // should we use inline style-block
@@ -128,18 +161,6 @@ class CssToInlineStyles
 
         // process css
         $cssRules = $this->processCSS();
-
-        // create new DOMDocument
-        $document = new \DOMDocument('1.0', $this->getEncoding());
-
-        // set error level
-        $internalErrors = libxml_use_internal_errors(true);
-
-        // load HTML
-        $document->loadHTML($this->html);
-
-        // Restore error level
-        libxml_use_internal_errors($internalErrors);
 
         // create new XPath
         $xPath = new \DOMXPath($document);
@@ -603,6 +624,18 @@ class CssToInlineStyles
     public function setUseInlineStylesBlock($on = true)
     {
         $this->useInlineStylesBlock = (bool) $on;
+    }
+
+    /**
+     * Set use of inline link block
+     * If this is enabled the class will use the links reference in the HTML.
+     *
+     * @return void
+     * @param  bool [optional] $on Should we process link styles?
+     */
+    public function setLoadCSSFromHTML($on = true)
+    {
+        $this->loadCSSFromHTML = (bool) $on;
     }
 
     /**
