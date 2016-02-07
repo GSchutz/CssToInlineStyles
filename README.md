@@ -33,6 +33,11 @@ $ composer require tijsverkoyen/css-to-inline-styles
     $cssToInlineStyles->setUseInlineStylesBlock(true);
     $html = $cssToInlineStyles->convert();
 
+    // Or use linked files from the HTML as CSS
+    $cssToInlineStyles = new CssToInlineStyles($html);
+    $cssToInlineStyles->setLoadCSSFromHTML(true);
+    $html = $cssToInlineStyles->convert();
+
 
 ## Documentation
 
